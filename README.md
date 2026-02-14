@@ -127,3 +127,7 @@ curl "http://localhost:8000/api/v1/prompts?name=movie-critic" \
 - Refresh-token/session management
 - Python SDK packaging
 - Production hardening and observability
+
+## License
+
+MIT. See `LICENSE`.
