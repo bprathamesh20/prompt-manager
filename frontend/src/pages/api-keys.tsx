@@ -1,20 +1,20 @@
 import { FormEvent, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { ArrowLeft, Copy, RefreshCw } from "lucide-react";
 
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
 import {
   promptApiClient,
   type ApiKeyCreateResponse,
   type ApiKeyMetadataResponse
 } from "@/lib/api-client";
 
-const inputClassName =
-  "w-full rounded-md border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/40";
-
 function formatDate(value?: string | null): string {
-  if (!value) {
-    return "Never";
-  }
+  if (!value) return "Never";
   return new Date(value).toLocaleString();
 }
 
@@ -26,16 +26,15 @@ export function ApiKeysPage() {
   const [createName, setCreateName] = useState("");
   const [creating, setCreating] = useState(false);
   const [revealedKey, setRevealedKey] = useState<ApiKeyCreateResponse | null>(null);
-  const [copyStatus, setCopyStatus] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
 
   async function loadKeys() {
     setLoading(true);
     setError(null);
     try {
-      const list = await promptApiClient.listApiKeys();
-      setKeys(list);
-    } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : "Failed to load API keys.");
+      setKeys(await promptApiClient.listApiKeys());
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load API keys.");
     } finally {
       setLoading(false);
     }
@@ -48,142 +47,146 @@ export function ApiKeysPage() {
   async function handleCreate(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
-    setCopyStatus(null);
-
     const name = createName.trim();
-    if (!name) {
-      setError("Key name is required.");
-      return;
-    }
+    if (!name) return;
 
     setCreating(true);
     try {
       const created = await promptApiClient.createApiKey({ name });
       setRevealedKey(created);
-      setKeys((current) => [created, ...current]);
+      setKeys((prev) => [created, ...prev]);
       setCreateName("");
-    } catch (createError) {
-      setError(createError instanceof Error ? createError.message : "Failed to create API key.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to create API key.");
     } finally {
       setCreating(false);
     }
   }
 
-  async function handleDelete(id: number) {
-    setError(null);
-    setCopyStatus(null);
+  async function handleRevoke(id: number) {
     try {
       await promptApiClient.deleteApiKey(id);
-      setKeys((current) =>
-        current.map((key) =>
-          key.id === id ? { ...key, revoked_at: new Date().toISOString() } : key
+      setKeys((prev) =>
+        prev.map((k) =>
+          k.id === id ? { ...k, revoked_at: new Date().toISOString() } : k
         )
       );
-    } catch (deleteError) {
-      setError(deleteError instanceof Error ? deleteError.message : "Failed to revoke API key.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to revoke.");
     }
   }
 
-  async function copyKey(rawKey: string) {
-    try {
-      await navigator.clipboard.writeText(rawKey);
-      setCopyStatus("Copied to clipboard.");
-    } catch {
-      setCopyStatus("Copy failed. Please copy manually.");
-    }
+  function copyKey(raw: string) {
+    navigator.clipboard.writeText(raw);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
   }
 
   return (
-    <main className="min-h-screen bg-background text-foreground">
-      <div className="mx-auto max-w-4xl p-8">
-        <header className="mb-8 flex items-start justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-bold">API Keys</h1>
-            <p className="mt-2 text-muted-foreground">
-              Create and revoke user-specific read-only integration keys.
-            </p>
-          </div>
-          <Button variant="outline" onClick={() => navigate("/", { replace: true })}>
-            Back to Home
+    <div className="min-h-screen">
+      <div className="mx-auto max-w-3xl px-6 py-8">
+        <div className="mb-6 flex items-center gap-3">
+          <Button variant="ghost" size="sm" onClick={() => navigate("/")}>
+            <ArrowLeft className="mr-1 h-4 w-4" />
+            Back
           </Button>
-        </header>
+        </div>
 
-        <section className="mb-6 rounded-lg border bg-card p-6 shadow-sm">
-          <h2 className="text-lg font-semibold">Create API Key</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            You can have up to 5 active keys. The raw key is shown only once.
-          </p>
-          <form className="mt-4 flex flex-col gap-3 sm:flex-row" onSubmit={handleCreate}>
-            <input
-              className={inputClassName}
+        <h1 className="text-2xl font-semibold tracking-tight">API Keys</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Manage integration keys for programmatic access. Max 5 active keys.
+        </p>
+
+        <Separator className="my-6" />
+
+        {/* Create */}
+        <div className="rounded-lg border p-5">
+          <Label className="text-sm font-medium">Create new key</Label>
+          <form className="mt-3 flex gap-3" onSubmit={handleCreate}>
+            <Input
+              className="flex-1"
               value={createName}
-              onChange={(event) => setCreateName(event.target.value)}
+              onChange={(e) => setCreateName(e.target.value)}
               placeholder="Key name (e.g. CI read key)"
             />
             <Button type="submit" disabled={creating}>
-              {creating ? "Creating..." : "Create Key"}
+              {creating ? "Creating..." : "Create"}
             </Button>
           </form>
-        </section>
+        </div>
 
+        {/* Revealed key */}
         {revealedKey && (
-          <section className="mb-6 rounded-lg border border-amber-300 bg-amber-50 p-6 text-amber-900">
-            <h3 className="text-sm font-semibold">Copy this key now</h3>
-            <p className="mt-1 text-sm">This value will not be shown again.</p>
-            <code className="mt-3 block overflow-x-auto rounded bg-white p-3 text-xs">
+          <div className="mt-4 rounded-lg border border-amber-500/30 bg-amber-500/10 p-5">
+            <p className="text-sm font-medium text-amber-400">
+              Copy this key now — it won't be shown again.
+            </p>
+            <code className="mt-3 block overflow-x-auto rounded border bg-secondary/50 px-3 py-2 font-mono text-xs">
               {revealedKey.api_key}
             </code>
-            <div className="mt-3 flex items-center gap-3">
-              <Button onClick={() => copyKey(revealedKey.api_key)}>Copy</Button>
-              {copyStatus && <span className="text-sm">{copyStatus}</span>}
-            </div>
-          </section>
-        )}
-
-        <section className="rounded-lg border bg-card p-6 shadow-sm">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-lg font-semibold">Your Keys</h2>
-            <Button variant="outline" onClick={() => void loadKeys()}>
-              Refresh
+            <Button size="sm" className="mt-3" onClick={() => copyKey(revealedKey.api_key)}>
+              <Copy className="mr-1 h-3.5 w-3.5" />
+              {copied ? "Copied" : "Copy key"}
             </Button>
           </div>
+        )}
 
-          {error && <p className="mb-3 text-sm text-red-600">{error}</p>}
+        {error && <p className="mt-4 text-sm text-red-400">{error}</p>}
+
+        <Separator className="my-6" />
+
+        {/* Key list */}
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-medium">Your keys</h2>
+          <Button variant="ghost" size="sm" onClick={() => void loadKeys()}>
+            <RefreshCw className="mr-1 h-3.5 w-3.5" />
+            Refresh
+          </Button>
+        </div>
+
+        <div className="mt-4 space-y-3">
           {loading ? (
             <p className="text-sm text-muted-foreground">Loading...</p>
           ) : keys.length === 0 ? (
             <p className="text-sm text-muted-foreground">No API keys created yet.</p>
           ) : (
-            <div className="space-y-3">
-              {keys.map((key) => (
-                <div key={key.id} className="rounded-md border p-4">
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div className="space-y-1 text-sm">
-                      <p>
-                        <span className="font-medium">{key.name}</span> ({key.prefix}...)
-                      </p>
-                      <p className="text-muted-foreground">Created: {formatDate(key.created_at)}</p>
-                      <p className="text-muted-foreground">
-                        Last used: {formatDate(key.last_used_at || null)}
-                      </p>
-                      <p className="text-muted-foreground">
-                        Revoked: {key.revoked_at ? formatDate(key.revoked_at) : "Active"}
-                      </p>
-                    </div>
-                    <Button
-                      variant="outline"
-                      disabled={Boolean(key.revoked_at)}
-                      onClick={() => void handleDelete(key.id)}
-                    >
-                      {key.revoked_at ? "Revoked" : "Revoke"}
-                    </Button>
+            keys.map((key) => (
+              <div key={key.id} className="flex items-center justify-between rounded-lg border p-4">
+                <div className="space-y-1 text-sm">
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium">{key.name}</span>
+                    <Badge variant="outline" className="font-mono text-xs">
+                      {key.prefix}...
+                    </Badge>
+                    {key.revoked_at ? (
+                      <Badge variant="outline" className="border-red-500/30 text-red-400 text-xs">
+                        Revoked
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="border-emerald-500/30 text-emerald-400 text-xs">
+                        Active
+                      </Badge>
+                    )}
                   </div>
+                  <p className="text-xs text-muted-foreground">
+                    Created {formatDate(key.created_at)}
+                    {key.last_used_at && ` · Last used ${formatDate(key.last_used_at)}`}
+                  </p>
                 </div>
-              ))}
-            </div>
+                {!key.revoked_at && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => void handleRevoke(key.id)}
+                  >
+                    Revoke
+                  </Button>
+                )}
+              </div>
+            ))
           )}
-        </section>
+        </div>
       </div>
-    </main>
+    </div>
   );
 }

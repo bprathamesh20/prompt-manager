@@ -37,7 +37,7 @@ def _to_prompt_response(
 
 @router.get("", response_model=list[PromptVersionResponse])
 def get_prompts(
-    name: str = Query(..., description="Prompt name"),
+    name: str | None = Query(None, description="Optional prompt name filter"),
     tag: str | None = Query(None, description="Optional prompt tag"),
     access: PromptReadAccess = Depends(get_prompt_read_access),
     db: Session = Depends(get_db),

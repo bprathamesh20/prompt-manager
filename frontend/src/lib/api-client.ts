@@ -13,7 +13,7 @@ export type PromptCreateRequest = {
 };
 
 export type PromptLookupQuery = {
-  name: string;
+  name?: string;
   tag?: string;
 };
 
@@ -133,12 +133,17 @@ export class PromptApiClient {
   }
 
   async getPrompts(query: PromptLookupQuery): Promise<PromptVersionResponse[]> {
-    const params = new URLSearchParams({ name: query.name });
+    const params = new URLSearchParams();
+    if (query.name?.trim()) {
+      params.set("name", query.name.trim());
+    }
     if (query.tag) {
       params.set("tag", query.tag);
     }
 
-    return this.request<PromptVersionResponse[]>(`/api/v1/prompts?${params.toString()}`);
+    const queryString = params.toString();
+    const path = queryString ? `/api/v1/prompts?${queryString}` : "/api/v1/prompts";
+    return this.request<PromptVersionResponse[]>(path);
   }
 
   async createPrompt(payload: PromptCreateRequest): Promise<PromptVersionResponse> {

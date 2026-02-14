@@ -36,7 +36,7 @@ def _get_prompt_version_by_id(
 def get_prompt_versions(
     db: Session,
     *,
-    name: str,
+    name: str | None,
     tag: str | None,
     owner_id: int | None = None,
 ) -> list[PromptVersion]:
@@ -44,9 +44,11 @@ def get_prompt_versions(
         select(PromptVersion)
         .join(Prompt)
         .options(joinedload(PromptVersion.prompt), selectinload(PromptVersion.tags))
-        .where(Prompt.name == name)
-        .order_by(PromptVersion.version.desc())
+        .order_by(Prompt.name.asc(), PromptVersion.version.desc())
     )
+
+    if name:
+        statement = statement.where(Prompt.name == name)
 
     if owner_id is not None:
         statement = statement.where(Prompt.owner_id == owner_id)

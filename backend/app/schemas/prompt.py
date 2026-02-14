@@ -12,7 +12,7 @@ class PromptCreateRequest(BaseModel):
 
 
 class PromptLookupQuery(BaseModel):
-    name: str = Field(min_length=1, max_length=255)
+    name: str | None = Field(default=None, min_length=1, max_length=255)
     tag: str | None = Field(default=None, min_length=1, max_length=64)
 
 
