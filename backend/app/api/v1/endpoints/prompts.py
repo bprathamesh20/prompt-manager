@@ -39,12 +39,21 @@ def _to_prompt_response(
 def get_prompts(
     name: str | None = Query(None, description="Optional prompt name filter"),
     tag: str | None = Query(None, description="Optional prompt tag"),
+    latest: bool = Query(False, description="Return only the latest matching version."),
+    limit: int | None = Query(
+        None, ge=1, le=100, description="Optional max number of matching versions."
+    ),
     access: PromptReadAccess = Depends(get_prompt_read_access),
     db: Session = Depends(get_db),
 ) -> list[PromptVersionResponse]:
     lookup = PromptLookupQuery(name=name, tag=tag)
+    resolved_limit = 1 if latest else limit
     prompt_versions = prompt_dal.get_prompt_versions(
-        db, name=lookup.name, tag=lookup.tag, owner_id=access.owner_id
+        db,
+        name=lookup.name,
+        tag=lookup.tag,
+        owner_id=access.owner_id,
+        limit=resolved_limit,
     )
     return [_to_prompt_response(version, lookup.tag) for version in prompt_versions]
 

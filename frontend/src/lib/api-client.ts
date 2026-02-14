@@ -15,6 +15,8 @@ export type PromptCreateRequest = {
 export type PromptLookupQuery = {
   name?: string;
   tag?: string;
+  latest?: boolean;
+  limit?: number;
 };
 
 export type PromptUpdateRequest = {
@@ -139,6 +141,12 @@ export class PromptApiClient {
     }
     if (query.tag) {
       params.set("tag", query.tag);
+    }
+    if (query.latest) {
+      params.set("latest", "true");
+    }
+    if (query.limit && query.limit > 0) {
+      params.set("limit", String(query.limit));
     }
 
     const queryString = params.toString();

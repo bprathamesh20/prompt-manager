@@ -39,6 +39,7 @@ def get_prompt_versions(
     name: str | None,
     tag: str | None,
     owner_id: int | None = None,
+    limit: int | None = None,
 ) -> list[PromptVersion]:
     statement = (
         select(PromptVersion)
@@ -55,6 +56,9 @@ def get_prompt_versions(
 
     if tag:
         statement = statement.join(PromptTag).where(PromptTag.name == tag)
+
+    if limit is not None:
+        statement = statement.limit(limit)
 
     return db.execute(statement).unique().scalars().all()
 

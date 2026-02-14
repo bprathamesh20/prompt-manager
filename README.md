@@ -114,6 +114,13 @@ curl "http://localhost:8000/api/v1/prompts?name=movie-critic" \
   -H "X-API-Key: <USER_API_KEY>"
 ```
 
+Read only latest matching version:
+
+```bash
+curl "http://localhost:8000/api/v1/prompts?name=movie-critic&tag=prod&latest=true" \
+  -H "X-API-Key: <USER_API_KEY>"
+```
+
 ## Implemented Scope
 
 - Prompt CRUD/version/tag flow (MVP)

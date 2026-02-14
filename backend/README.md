@@ -25,6 +25,9 @@ API key behavior:
 ## Prompt Access Rules
 
 - `GET /api/v1/prompts`: JWT user scope or read-only user API key (`X-API-Key`)
+  - Optional query params:
+  - `latest=true` returns only the newest matching version
+  - `limit=<n>` limits number of returned matches (1-100)
 - `POST /api/v1/prompts`: JWT required
 - `PUT /api/v1/prompts/{id}`: JWT required and ownership enforced
 - `DELETE /api/v1/prompts/{id}`: JWT required and ownership enforced
